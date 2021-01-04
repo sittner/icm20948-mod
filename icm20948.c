@@ -454,6 +454,10 @@ static irqreturn_t icm20948_trigger_handler(int irq, void *p)
 		goto fail0;
 	}
 
+	// mag y and z axis is flipped around the x axis
+	buffer.sens.mag.y = -buffer.sens.mag.y;
+	buffer.sens.mag.z = -buffer.sens.mag.z;
+
 	buffer.timestamp = iio_get_time_ns(indio_dev);
 	iio_push_to_buffers(indio_dev, &buffer);
 
@@ -517,7 +521,12 @@ static int icm20948_read_raw(struct iio_dev *indio_dev,
 		case IIO_ANGL_VEL:
 			return icm20948_read_raw_word(icm, GYRO_XOUT_H, chan->channel2, val);
 		case IIO_MAGN:
-			return icm20948_read_raw_word(icm, EXT_SLV_SENS_DATA_00, chan->channel2, val);
+			i = icm20948_read_raw_word(icm, EXT_SLV_SENS_DATA_00, chan->channel2, val);
+			// mag y and z axis is flipped around the x axis
+			if (chan->channel2 == IIO_MOD_Y || chan->channel2 == IIO_MOD_Z) {
+				return -i;
+			}
+			return i;
 		case IIO_TEMP:
 			return icm20948_read_raw_word(icm, TEMP_OUT_H, -1, val);
 		default:
